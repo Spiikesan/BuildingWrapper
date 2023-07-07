@@ -8,7 +8,7 @@ using Facepunch;
 
 namespace Oxide.Plugins
 {
-	[Info("Building Wrapper", "Spiikesan", "0.1.6")]
+	[Info("Building Wrapper", "Spiikesan", "0.1.7")]
 	[Description("Utility to wrap zones around buildings neatly and efficiently")]
 	class BuildingWrapper : RustPlugin
 	{
@@ -39,7 +39,7 @@ namespace Oxide.Plugins
 		#region Lang
 
 		// load default messages to Lang
-		void LoadDefaultMessages()
+		protected override void LoadDefaultMessages()
 		{
 			var messages = new Dictionary<string, string>
 			{
@@ -140,7 +140,7 @@ namespace Oxide.Plugins
 		// wrap a string in a <size> tag with the passed size
 		static string wrapSize(int size, string input)
 		{
-			if (input == null || input == "")
+			if (input == null || input.Length == 0)
 				return input;
 			return "<size=" + size + ">" + input + "</size>";
 		}
@@ -148,7 +148,7 @@ namespace Oxide.Plugins
 		// wrap a string in a <color> tag with the passed color
 		static string wrapColor(string color, string input)
 		{
-			if (input == null || input == "" || color == null || color == "")
+			if (input == null || input.Length == 0 || color == null || color.Length == 0)
 				return input;
 			return "<color=" + color + ">" + input + "</color>";
 		}
@@ -185,7 +185,7 @@ namespace Oxide.Plugins
 				
 				float buffer = 1.0f;
 				Option shape = Option.undef;
-				if(args.Length < 2 || args[1] == "")
+				if(args.Length < 2 || args[1].Length == 0)
 				{
 					SendReply(player, wrapSize(12, wrapColor("red", GetMessage("MissingZoneId", player.UserIDString))));
 					return;
@@ -234,7 +234,7 @@ namespace Oxide.Plugins
 			HashSet<BuildingBlock> structure = new HashSet<BuildingBlock>();
 			// get zone information
 			Dictionary<string,string> zoneInfo = (Dictionary<string, string>) ZoneManager?.Call("ZoneFieldList", new object[] {zoneId});
-			if(zoneInfo == null || zoneInfo.Count() == 0)
+			if(zoneInfo == null || zoneInfo.Count == 0)
 			{
 				// failed to find zone - send message, flag zoneShape as undef
 				SendReply(player, wrapSize(12, wrapColor("red", String.Format(GetMessage("ZoneNotFound", player.UserIDString), zoneId))));
@@ -276,11 +276,11 @@ namespace Oxide.Plugins
 			return structure;
 		}
 		
-		// raycast and return the closest entity - returns false if a valid entity is not found
+		// raycast and return the closest entity - returns true if a valid entity is found
 		// amalgamation of processes from CopyPaste, and some adjustments
-		bool GetRaycastTarget(BasePlayer player, out object closestEntity)
+		bool GetRaycastTarget(BasePlayer player, out BaseEntity closestEntity)
 		{
-			closestEntity = false;
+			closestEntity = null;
 			var input = player.serverInput;
 			if (input == null || input.current == null || input.current.aimAngles == Vector3.zero)
 				return false;
@@ -300,9 +300,7 @@ namespace Oxide.Plugins
 					closestEntity = hit.GetEntity();
 				}
 			}
-			if (closestEntity is bool)
-				return false;
-			return true;
+			return closestEntity != null;
 		}
 		
 		// get all BuildingBlock entities in structure
@@ -366,7 +364,7 @@ namespace Oxide.Plugins
 				// default sphere
 				zoneShape = Option.sphere;
 				// raycast to find building
-				object closestEntity;
+				BaseEntity closestEntity;
 				if (!GetRaycastTarget(player, out closestEntity))
 				{
 					SendReply(player, wrapSize(12, wrapColor("red", GetMessage("NoBuilding", player.UserIDString))));
@@ -423,7 +421,7 @@ namespace Oxide.Plugins
 			
 			float extents = 0f;
 			HashSet<Vector2> points = new HashSet<Vector2>();
-			for(int i=0; i<blocks.Count(); i++)
+			for(int i=0; i<blocks.Count; i++)
 			{
 				Bounds b = blocks.ElementAt(i).WorldSpaceBounds().ToBounds();
 				//float d = b.max;
@@ -541,7 +539,7 @@ namespace Oxide.Plugins
 			float maxY = -Mathf.Infinity;
 			float minZ =  Mathf.Infinity;
 			float maxZ = -Mathf.Infinity;
-			for(int i=0; i<blocks.Count(); i++)
+			for(int i=0; i<blocks.Count; i++)
 			{
 				Vector3 v = blocks.ElementAt(i).CenterPoint();
 				if(v == Vector3.zero)
@@ -565,7 +563,7 @@ namespace Oxide.Plugins
 			// find radius
 			float radius = 0f;
 			float extents = 0f;
-			for(int i=0; i<blocks.Count(); i++)
+			for(int i=0; i<blocks.Count; i++)
 			{
 				Bounds b = blocks.ElementAt(i).WorldSpaceBounds().ToBounds();
 				Vector3 v = blocks.ElementAt(i).CenterPoint();
@@ -850,7 +848,7 @@ namespace Oxide.Plugins
 		public void BoxColliders<T>(Vector3 position, Vector3 halfExtents, Quaternion orientation, List<T> list, int layerMask = -1, QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Collide)
 		where T : Collider
 		{
-			layerMask = GamePhysics.HandleTerrainCollision(position, layerMask);
+			layerMask = GamePhysics.HandleIgnoreCollision(position, layerMask);
 			int num = Physics.OverlapBoxNonAlloc(position, halfExtents, colBuffer, orientation, layerMask, triggerInteraction);
 			if (num >= (int)colBuffer.Length)
 			{
