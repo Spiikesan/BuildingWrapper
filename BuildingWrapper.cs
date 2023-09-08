@@ -30,7 +30,7 @@ namespace Oxide.Plugins
 		// vertical height adjustment
 		private const float yAdjust = 2f;
 		// collider buffer for finding building blocks
-    	private Collider[] colBuffer;
+		private Collider[] colBuffer;
 
 		const float previewTime = 15f;
 
